@@ -10,13 +10,17 @@ This guide explains how to flash CircuitPython firmware onto the STM32F405 board
 
 2. **Prepare the STM32F405 for Flashing**
    - Put the STM32F405 into **boot mode**:
-     - Hold the **BOOT0** button.
-     - While holding BOOT0, press and release the **RESET** button.
-     - Release BOOT0 after reset.
+     - Jump from pad **3.3v --to-- BO**.
+     - Press and release the **RESET** button.
+     - In DFU mode
 
 3. **Flash the Firmware**
-   - Use a programmer to flash the `.bin` file onto the board:
-     - Open your STM32 flashing tool (e.g., STM32CubeProgrammer or `dfu-util`).
+   - Use a STM programmer to flash the `.bin` file onto the board:
+     - Open your STM32 flashing tool (STM32CubeProgrammer).
+     - While in DFU mode connect via USB connection
+     - In software under USB config refresh port
+     - connect to stm
+     - Under erase & programming upload file
      - Select the `.bin` firmware file.
      - Flash the file to the board.
 
@@ -29,5 +33,3 @@ This guide explains how to flash CircuitPython firmware onto the STM32F405 board
    - For libraries, examples, and documentation, [Adafruit CircuitPython site](https://learn.adafruit.com/welcome-to-circuitpython).
 
 ---
-
-Follow these steps to set up CircuitPython and start working with your STM32F405 board!
