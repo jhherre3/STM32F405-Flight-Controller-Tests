@@ -22,12 +22,3 @@ The repository is organized as follows:
 - **tools/**: Custom scripts or utilities for testing.
 
 ---
-
-## 🛠️ Getting Started
-
-To get started, follow these steps:
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/jhherre3/Flight-Controller-Test-Repo.git
-   cd Flight-Controller-Test-Repo
