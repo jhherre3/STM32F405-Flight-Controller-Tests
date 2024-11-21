@@ -1,0 +1,13 @@
+void setup() {
+  Serial.begin(115200);   // Serial Monitor
+  Serial1.begin(9600, SERIAL_8N1, 16, 17);  // UART1: RX=16, TX=17
+  Serial.println("ESP32 UART Receiver Ready");
+}
+
+void loop() {
+  if (Serial1.available()) {  // Check if data is received
+    String message = Serial1.readString();  // Read the message
+    Serial.print("Received: "); 
+    Serial.println(message);  // Print to Serial Monitor
+  }
+}
