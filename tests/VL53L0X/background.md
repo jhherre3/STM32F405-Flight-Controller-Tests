@@ -50,7 +50,7 @@ The VL53L0X measures distance using Time-of-Flight (ToF) technology:
 3. **Calculate**: The sensor calculates the distance based on the time it took for the light to return.
 
 ### Measurement Equation:
-\[ d = (c*t)/2]
+[ d = (c*t)/2]
 Where:
 - \( d \): Distance to the object.
 - \( c \): Speed of light (\( 3 \times 10^8 \, m/s \)).
