@@ -1,0 +1,62 @@
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
+
+// Replace with your Wi-Fi credentials
+const char* ssid = "Your_WiFi_SSID";
+const char* password = "Your_WiFi_Password";
+
+// Create an Async Web Server on port 80
+AsyncWebServer server(80);
+
+// STM32 message buffer
+String stm32Data = "Waiting for STM32 data...";
+
+// UART Pins (STM32 TX to ESP32 RX)
+const int RX_PIN = 16;  // STM32 TX to ESP32 RX
+const int TX_PIN = 17;  // Not used here
+
+void setup() {
+  Serial.begin(115200);      // Debugging on Serial Monitor
+  Serial1.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);  // UART communication with STM32
+  delay(1000);
+
+  // Connect to Wi-Fi
+  Serial.println("Connecting to Wi-Fi...");
+  WiFi.begin(ssid, password);
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  // Display Wi-Fi details
+  Serial.println("\nWi-Fi Connected!");
+  Serial.print("SSID: ");
+  Serial.println(ssid);
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  // Web server endpoint to display STM32 data
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    String html = "<!DOCTYPE html><html><body>";
+    html += "<h1>STM32 Data Viewer</h1>";
+    html += "<p>Message from STM32: <b>" + stm32Data + "</b></p>";
+    html += "</body></html>";
+    request->send(200, "text/html", html);
+  });
+
+  // Start server
+  server.begin();
+  Serial.println("Web server started!");
+}
+
+void loop() {
+  // Read data from STM32
+  if (Serial1.available()) {
+    stm32Data = Serial1.readStringUntil('\n');  // Read a line of data from STM32
+    Serial.println("Received from STM32: " + stm32Data);  // Debug output
+  }
+
+  delay(100);  // Small delay to avoid overwhelming the server
+}
