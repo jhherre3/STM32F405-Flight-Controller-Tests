@@ -18,12 +18,14 @@ These tools are highly recommended for developing and testing flight controllers
 
 ---
 
-### 2. **STM32CubeMX**
-- **Description**: A graphical configuration tool that simplifies STM32 peripheral initialization and code generation.
+### 2. **STM32CubeProgrammer**
+- **Description**: A software tool designed for flashing, erasing, and managing the memory of STM32 microcontrollers.
 - **Key Features**:
-  - Visual configuration of GPIO, clock, and peripherals.
-  - Automatic code generation for HAL and LL libraries.
-- **Download Link**: [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html)
+  - Flash programming via multiple interfaces (JTAG, SWD, UART, USB, etc.).
+  - Advanced memory management, including option byte configuration.
+  - Verify, erase, and read memory operations.
+  - Real-time debug support for target devices.
+- **Download Link**: [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html)
 
 ---
 
