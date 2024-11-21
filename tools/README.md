@@ -86,6 +86,28 @@ These tools are highly recommended for developing and testing flight controllers
   - Integration with hardware for HIL (Hardware-in-the-Loop) testing.
 - **Download Link**: [MATLAB and Simulink](https://www.mathworks.com/)
 
+---
+
+### 9. **CircuitPython**
+- **Description**: A version of Python optimized for microcontrollers, ideal for rapid prototyping and hardware control.
+- **Key Features**:
+  - Simple and easy-to-learn syntax for hardware interaction.
+  - Wide library support for sensors, displays, and communication protocols.
+  - Direct support for STM32 and other microcontrollers.
+- **Download Link**: [CircuitPython](https://circuitpython.org/)
+
+---
+
+### 10. **Adafruit CircuitPython Libraries**
+- **Description**: A comprehensive library bundle for CircuitPython to support various sensors, displays, and communication protocols.
+- **Key Features**:
+  - Drivers for OLED, GPS, IMU, and ToF sensors.
+  - Regular updates and support for new devices.
+  - Easy-to-integrate with CircuitPython projects.
+- **Download Link**: [Adafruit CircuitPython Library Bundle](https://circuitpython.org/libraries)
+
+---
+
 ## 📖 Important Topics
 - **Autonomous Navigation**:
   - SLAM (Simultaneous Localization and Mapping).
