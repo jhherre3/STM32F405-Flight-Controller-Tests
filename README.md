@@ -12,6 +12,6 @@ The repository is organized as follows:
 - **tests/**: Test code for verifying various peripherals and functionalities.
   - **sensor/**: Basic setup and instructions for each subsystem.
 - **images/**: Photos and screenshots of hardware setups and test results.
-- **tools/**: Custom scripts or utilities for testing.
+- **tools/**: Software used for testing.
 
 ---
