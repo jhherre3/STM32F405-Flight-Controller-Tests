@@ -10,12 +10,7 @@ The repository is organized as follows:
 
 - **datasheets/**: Component datasheets for easy reference.
 - **tests/**: Test code for verifying various peripherals and functionalities.
-  - **GPIO/**: General Purpose Input/Output tests.
-  - **ADC/**: Analog-to-Digital Converter tests.
-  - **PWM/**: Pulse Width Modulation tests.
-  - **I2C/**: Inter-Integrated Circuit tests.
-  - **SPI/**: Serial Peripheral Interface tests.
-  - **UART/**: Universal Asynchronous Receiver-Transmitter tests.
+  - **sensor/**: Basic setup and instructions for each subsystem.
 - **diagrams/**: Wiring and system block diagrams for setup and testing.
 - **images/**: Photos and screenshots of hardware setups and test results.
 - **results/**: Logs, test outcomes, and analysis documentation.
