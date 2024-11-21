@@ -42,12 +42,11 @@ Connect the LIS3MDL magnetometer to the STM32F405 board as follows:
 |------------------|------------------------|----------------------------|
 | VIN             | 3.3V or 5V            | Power supply for the sensor |
 | GND             | GND                   | Ground connection          |
-| SCL             | SCL (e.g., D22)       | I2C Clock                  |
-| SDA             | SDA (e.g., D21)       | I2C Data                   |
+| SCL             | SCL                   | I2C Clock                  |
+| SDA             | SDA                   | I2C Data                   |
 
 ### Notes:
 - Ensure the LIS3MDL module supports the selected voltage (3.3V or 5V).
-- Use pull-up resistors (typically 4.7kΩ) on the SCL and SDA lines if not already included on the LIS3MDL breakout board.
 
 ---
 
@@ -62,24 +61,3 @@ Connect the LIS3MDL magnetometer to the STM32F405 board as follows:
    - For autonomous drones, the magnetometer aids in GPS-denied environments by offering orientation information that complements inertial measurements.
 
 ---
-
-## Example CircuitPython Code
-Save this example as `code.py` on the STM32F405's `CIRCUITPY` drive to verify LIS3MDL functionality:
-
-```python
-import board
-import busio
-import time
-from adafruit_lis3mdl import LIS3MDL
-
-# Initialize I2C bus and LIS3MDL sensor
-i2c = busio.I2C(board.SCL, board.SDA)
-sensor = LIS3MDL(i2c)
-
-print("LIS3MDL Magnetometer Initialized")
-
-while True:
-    # Read magnetic field data
-    mag_x, mag_y, mag_z = sensor.magnetic
-    print(f"Magnetic Field (uT): X={mag_x:.2f}, Y={mag_y:.2f}, Z={mag_z:.2f}")
-    time.sleep(0.5)
