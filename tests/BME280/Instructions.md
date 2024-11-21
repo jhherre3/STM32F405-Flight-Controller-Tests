@@ -5,7 +5,7 @@ This guide explains how to set up the BME280 sensor with the STM32F405 board and
 ---
 
 ## **Required Files**
-Download the required files from the [Adafruit CircuitPython Library Bundle](https://circuitpython.org/libraries) and place them in the `lib` folder on your `CIRCUITPY` drive:
+Download the required files from the [Adafruit CircuitPython Library Bundle v9](https://circuitpython.org/libraries) and place them in the `lib` folder on your `CIRCUITPY` drive:
 
 1. **`adafruit_bus_device`** (folder)
    - Handles I2C communication.
