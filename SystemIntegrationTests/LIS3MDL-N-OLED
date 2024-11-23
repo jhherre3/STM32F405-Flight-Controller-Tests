@@ -1,0 +1,121 @@
+import board
+import busio
+import time
+import digitalio
+import displayio
+from adafruit_displayio_ssd1306 import SSD1306
+from adafruit_display_text import label
+from adafruit_display_shapes.rect import Rect
+from adafruit_lis3mdl import LIS3MDL
+import terminalio
+
+# Release any previously configured displays
+displayio.release_displays()
+
+# Initialize I2C
+i2c = busio.I2C(board.SCL, board.SDA)
+
+# Set up the OLED display
+WIDTH = 128
+HEIGHT = 64  # Adjust for 128x64 OLED
+display_bus = displayio.I2CDisplay(i2c, device_address=0x3C)
+oled = SSD1306(display_bus, width=WIDTH, height=HEIGHT)
+
+# Create a display group
+group = displayio.Group()
+
+# Add a rectangle for design
+rectangle = Rect(x=0, y=0, width=WIDTH, height=20, fill=0xFFFFFF)
+group.append(rectangle)
+
+# Add a title label
+title_label = label.Label(
+    terminalio.FONT, text="LIS3MDL Magnetometer", color=0x000000, x=5, y=5
+)
+group.append(title_label)
+
+# Add labels for magnetic field data (to be updated dynamically)
+mag_x_label = label.Label(terminalio.FONT, text="X: -- uT", color=0xFFFFFF, x=10, y=25)
+group.append(mag_x_label)
+
+mag_y_label = label.Label(terminalio.FONT, text="Y: -- uT", color=0xFFFFFF, x=10, y=35)
+group.append(mag_y_label)
+
+mag_z_label = label.Label(terminalio.FONT, text="Z: -- uT", color=0xFFFFFF, x=10, y=45)
+group.append(mag_z_label)
+
+calibration_label = label.Label(
+    terminalio.FONT, text="Calibrating...", color=0xFFFFFF, x=10, y=55
+)
+group.append(calibration_label)
+
+# Set the display's root group to show the content
+oled.root_group = group
+
+# Initialize LIS3MDL sensor
+try:
+    sensor = LIS3MDL(i2c)
+    print("LIS3MDL Magnetometer Initialized")
+except Exception as e:
+    print(f"Failed to initialize LIS3MDL: {e}")
+    while True:
+        pass  # Halt if initialization fails
+
+# Initialize reset button (for calibration)
+reset_button = digitalio.DigitalInOut(board.D5)  # Use an appropriate GPIO pin
+reset_button.switch_to_input(pull=digitalio.Pull.UP)
+
+# Calibration offsets
+offset_x = 0.0
+offset_y = 0.0
+offset_z = 0.0
+
+def calibrate():
+    """
+    Calibrates the LIS3MDL by capturing baseline magnetic field values.
+    """
+    global offset_x, offset_y, offset_z
+    calibration_label.text = "Calibrating..."
+    print("Calibrating...")
+    time.sleep(2)  # Delay for calibration notice
+    mag_x, mag_y, mag_z = sensor.magnetic
+    offset_x = mag_x
+    offset_y = mag_y
+    offset_z = mag_z
+    calibration_label.text = "Calibration Done"
+    print(f"Calibration complete. Offsets: X={offset_x:.2f}, Y={offset_y:.2f}, Z={offset_z:.2f}")
+
+# Perform an initial calibration
+calibrate()
+
+# Main loop
+while True:
+    try:
+        # Check if reset button is pressed
+        if not reset_button.value:
+            calibrate()
+
+        # Read raw magnetic field data
+        mag_x, mag_y, mag_z = sensor.magnetic
+
+        # Apply calibration offsets
+        cal_x = mag_x - offset_x
+        cal_y = mag_y - offset_y
+        cal_z = mag_z - offset_z
+
+        # Update the OLED display with the calibrated data
+        mag_x_label.text = f"X: {cal_x:.2f} uT"
+        mag_y_label.text = f"Y: {cal_y:.2f} uT"
+        mag_z_label.text = f"Z: {cal_z:.2f} uT"
+
+        # Debug output to the console
+        print(f"Raw Magnetic Field (uT): X={mag_x:.2f}, Y={mag_y:.2f}, Z={mag_z:.2f}")
+        print(f"Calibrated Magnetic Field (uT): X={cal_x:.2f}, Y={cal_y:.2f}, Z={cal_z:.2f}")
+
+    except Exception as e:
+        print(f"Error reading sensor: {e}")
+        mag_x_label.text = "Error"
+        mag_y_label.text = "Error"
+        mag_z_label.text = "Error"
+
+    time.sleep(0.5)  # Update every 0.5 seconds
