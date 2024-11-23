@@ -14,8 +14,8 @@ This section provides detailed instructions on how to connect and configure your
 ### **GPS Module Pinout**
 - **VCC**: Connect to 3.3V on the STM32.
 - **GND**: Connect to GND on the STM32.
-- **TXD**: Transmit pin from the GPS module. Connect to RX on the STM32 (e.g., `PB7`).
-- **RXD**: Receive pin on the GPS module. Connect to TX on the STM32 (e.g., `PB6`).
+- **TXD**: Transmit pin from the GPS module. Connect to RX on the STM32.
+- **RXD**: Receive pin on the GPS module. Connect to TX on the STM32.
 - **PPS (optional)**: Used for precise timing (not needed for basic functionality). Leave unconnected unless required.
 
 ---
