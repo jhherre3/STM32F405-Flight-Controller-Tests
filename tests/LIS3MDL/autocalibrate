@@ -1,0 +1,62 @@
+import board
+import busio
+import time
+from adafruit_lis3mdl import LIS3MDL
+
+# Initialize I2C
+i2c = busio.I2C(board.SCL, board.SDA)
+
+# Initialize LIS3MDL sensor
+try:
+    mag_sensor = LIS3MDL(i2c)
+    print("LIS3MDL Magnetometer Initialized")
+except Exception as e:
+    print(f"Failed to initialize LIS3MDL: {e}")
+    while True:
+        pass  # Halt if LIS3MDL fails
+
+# Initialize min and max values
+min_x, min_y, min_z = float('inf'), float('inf'), float('inf')
+max_x, max_y, max_z = float('-inf'), float('-inf'), float('-inf')
+
+print("Rotate the device in all directions to calibrate...")
+start_time = time.time()
+
+# Collect data for 30 seconds
+CALIBRATION_TIME = 30
+while time.time() - start_time < CALIBRATION_TIME:
+    try:
+        # Read magnetic field data
+        mag_x, mag_y, mag_z = mag_sensor.magnetic
+
+        # Update min and max values for each axis
+        min_x = min(min_x, mag_x)
+        max_x = max(max_x, mag_x)
+
+        min_y = min(min_y, mag_y)
+        max_y = max(max_y, mag_y)
+
+        min_z = min(min_z, mag_z)
+        max_z = max(max_z, mag_z)
+
+        # Print live min/max updates
+        print(f"X: Min={min_x:.2f}, Max={max_x:.2f}")
+        print(f"Y: Min={min_y:.2f}, Max={max_y:.2f}")
+        print(f"Z: Min={min_z:.2f}, Max={max_z:.2f}")
+
+        time.sleep(0.1)  # Small delay for readability
+    except Exception as e:
+        print(f"Error during calibration: {e}")
+
+# Calculate offsets
+offset_x = (max_x + min_x) / 2
+offset_y = (max_y + min_y) / 2
+offset_z = (max_z + min_z) / 2
+
+print("\nCalibration complete!")
+print(f"Offset X: {offset_x:.2f}")
+print(f"Offset Y: {offset_y:.2f}")
+print(f"Offset Z: {offset_z:.2f}")
+
+# Final values to use in your main program read in terminal 
+print(f"Apply these offsets in your main program to adjust readings.")
