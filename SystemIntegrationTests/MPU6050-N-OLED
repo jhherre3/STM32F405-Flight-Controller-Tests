@@ -1,0 +1,78 @@
+import time
+import math
+import board
+import busio
+import displayio
+from adafruit_displayio_ssd1306 import SSD1306
+from adafruit_display_text import label
+from adafruit_mpu6050 import MPU6050
+import terminalio
+
+# Release any previously configured displays
+displayio.release_displays()
+
+# Initialize I2C
+i2c = busio.I2C(board.SCL, board.SDA)
+
+# Initialize MPU6050 with address 0x69
+mpu = MPU6050(i2c, address=0x69)
+print("MPU6050 Initialized at address 0x69")
+
+# Initialize the OLED display
+WIDTH = 128
+HEIGHT = 64
+display_bus = displayio.I2CDisplay(i2c, device_address=0x3C)
+oled = SSD1306(display_bus, width=WIDTH, height=HEIGHT)
+
+# Create a display group for the OLED
+group = displayio.Group()
+
+# Add a title label
+title_label = label.Label(
+    terminalio.FONT, text="Drone Orientation", color=0xFFFFFF, x=5, y=5
+)
+group.append(title_label)
+
+# Add labels for pitch and roll
+pitch_label = label.Label(
+    terminalio.FONT, text="Pitch: --°", color=0xFFFFFF, x=5, y=25
+)
+group.append(pitch_label)
+
+roll_label = label.Label(
+    terminalio.FONT, text="Roll: --°", color=0xFFFFFF, x=5, y=45
+)
+group.append(roll_label)
+
+# Set the display's root group
+oled.root_group = group
+
+# Helper function to calculate pitch and roll
+def calculate_pitch_roll(accel_x, accel_y, accel_z):
+    pitch = math.atan2(accel_x, math.sqrt(accel_y ** 2 + accel_z ** 2)) * (180 / math.pi)
+    roll = math.atan2(accel_y, math.sqrt(accel_x ** 2 + accel_z ** 2)) * (180 / math.pi)
+    return pitch, roll
+
+# Main loop
+while True:
+    try:
+        # Read accelerometer data
+        accel_x, accel_y, accel_z = mpu.acceleration
+
+        # Calculate pitch and roll
+        pitch, roll = calculate_pitch_roll(accel_x, accel_y, accel_z)
+
+        # Update labels on OLED
+        pitch_label.text = f"Pitch: {pitch:.2f}°"
+        roll_label.text = f"Roll: {roll:.2f}°"
+
+        # Debug output to the console
+        print(f"Pitch: {pitch:.2f}°, Roll: {roll:.2f}°")
+
+    except Exception as e:
+        print(f"Error: {e}")
+        pitch_label.text = "Pitch: Error"
+        roll_label.text = "Roll: Error"
+
+    # Delay for readability
+    time.sleep(0.5)
