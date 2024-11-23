@@ -9,7 +9,7 @@ Welcome to the **Flight Controller Test Repository**. This repository serves as 
 The repository is organized as follows:
 
 - **datasheets/**: Component datasheets for easy reference.
-- **systemintegrationtest/**: validation that oled will display accurate data.
+- **SystemIntegrationTests/**: validation that oled will display accurate data.
 - **tests/**: Test code for verifying various peripherals and functionalities.
   - **sensor/**: Basic setup and instructions for each subsystem.
 - **images/**: Photos and screenshots of hardware setups and test results.
