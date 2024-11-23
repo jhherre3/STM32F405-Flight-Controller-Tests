@@ -1,0 +1,96 @@
+import time
+import board
+import busio
+import displayio
+from adafruit_displayio_ssd1306 import SSD1306
+from adafruit_display_text import label
+from adafruit_display_shapes.rect import Rect
+from adafruit_bme280 import basic as adafruit_bme280
+import terminalio
+
+# Release any previously configured displays
+displayio.release_displays()
+
+# Initialize I2C
+i2c = busio.I2C(board.SCL, board.SDA)
+
+# Set up the OLED display
+WIDTH = 128
+HEIGHT = 64  # Adjust for 128x64 OLED
+display_bus = displayio.I2CDisplay(i2c, device_address=0x3C)
+oled = SSD1306(display_bus, width=WIDTH, height=HEIGHT)
+
+# Create a display group
+group = displayio.Group()
+
+# Add a rectangle for design
+rectangle = Rect(x=0, y=0, width=WIDTH, height=20, fill=0xFFFFFF)
+group.append(rectangle)
+
+# Add a title label
+title_label = label.Label(
+    terminalio.FONT, text="BMP280 Sensor Data", color=0x000000, x=10, y=5
+)
+group.append(title_label)
+
+# Add labels for sensor data (to be updated dynamically)
+temperature_label = label.Label(
+    terminalio.FONT, text="Temp: -- °C", color=0xFFFFFF, x=10, y=25
+)
+group.append(temperature_label)
+
+humidity_label = label.Label(
+    terminalio.FONT, text="Humidity: -- %", color=0xFFFFFF, x=10, y=35
+)
+group.append(humidity_label)
+
+pressure_label = label.Label(
+    terminalio.FONT, text="Pressure: -- hPa", color=0xFFFFFF, x=10, y=45
+)
+group.append(pressure_label)
+
+altitude_label = label.Label(
+    terminalio.FONT, text="Altitude: -- m", color=0xFFFFFF, x=10, y=55
+)
+group.append(altitude_label)
+
+# Set the display's root group to show the content
+oled.root_group = group
+
+# Initialize BMP280 sensor
+try:
+    bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c, address=0x76)  # Default address
+    bme280.sea_level_pressure = 1013.25  # hPa find for your area
+    print("BMP280 initialized successfully.")
+except Exception as e:
+    print(f"Error initializing BMP280: {e}")
+    while True:
+        pass  # Halt execution if the sensor initialization fails
+
+# Main loop
+while True:
+    try:
+        # Read data from the BMP280
+        temperature_c = bme280.temperature
+        humidity = bme280.humidity
+        pressure = bme280.pressure
+        altitude = bme280.altitude
+
+        # Update the OLED display with new sensor values
+        temperature_label.text = f"Temp: {temperature_c:.2f} °C"
+        humidity_label.text = f"Humidity: {humidity:.2f} %"
+        pressure_label.text = f"Pressure: {pressure:.2f} hPa"
+        altitude_label.text = f"Altitude: {altitude:.2f} m"
+
+        # Debug output to the console
+        print(f"Temperature: {temperature_c:.2f} °C")
+        print(f"Humidity: {humidity:.2f} %")
+        print(f"Pressure: {pressure:.2f} hPa")
+        print(f"Altitude: {altitude:.2f} m")
+        print("-" * 40)
+
+    except Exception as e:
+        print(f"Error reading sensor data: {e}")
+        temperature_label.text = "Error: Sensor Fail"
+
+    time.sleep(2)  # Update every 2 seconds
