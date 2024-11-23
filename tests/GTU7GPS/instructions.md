@@ -3,6 +3,30 @@
 This document explains how to interpret GPS data output from your module, focusing on common NMEA sentences. An example output is included with a detailed explanation of its fields.
 
 ---
+# Instructions: GPS Module Hookup and Configuration
+
+This section provides detailed instructions on how to connect and configure your GPS module with the STM32 to interpret NMEA sentences. It includes the necessary wiring, configuration, and example outputs.
+
+---
+
+## **Wiring Instructions**
+
+### **GPS Module Pinout**
+- **VCC**: Connect to 3.3V on the STM32.
+- **GND**: Connect to GND on the STM32.
+- **TXD**: Transmit pin from the GPS module. Connect to RX on the STM32 (e.g., `PB7`).
+- **RXD**: Receive pin on the GPS module. Connect to TX on the STM32 (e.g., `PB6`).
+- **PPS (optional)**: Used for precise timing (not needed for basic functionality). Leave unconnected unless required.
+
+---
+
+## **Software Setup**
+
+### **Required Libraries**
+- **Adafruit GPS Library**: For parsing NMEA sentences and interacting with the GPS module.
+
+---
+
 
 ## **How to Interpret GPS Output**
 
