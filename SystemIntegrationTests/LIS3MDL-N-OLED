@@ -1,11 +1,10 @@
 import board
 import busio
 import time
-import digitalio
+import math
 import displayio
 from adafruit_displayio_ssd1306 import SSD1306
 from adafruit_display_text import label
-from adafruit_display_shapes.rect import Rect
 from adafruit_lis3mdl import LIS3MDL
 import terminalio
 
@@ -15,107 +14,109 @@ displayio.release_displays()
 # Initialize I2C
 i2c = busio.I2C(board.SCL, board.SDA)
 
-# Set up the OLED display
+# Set up the OLED display (rotated 180 degrees)
 WIDTH = 128
 HEIGHT = 64  # Adjust for 128x64 OLED
 display_bus = displayio.I2CDisplay(i2c, device_address=0x3C)
-oled = SSD1306(display_bus, width=WIDTH, height=HEIGHT)
+oled = SSD1306(display_bus, width=WIDTH, height=HEIGHT, rotation=180)
 
 # Create a display group
 group = displayio.Group()
 
-# Add a rectangle for design
-rectangle = Rect(x=0, y=0, width=WIDTH, height=20, fill=0xFFFFFF)
-group.append(rectangle)
-
 # Add a title label
 title_label = label.Label(
-    terminalio.FONT, text="LIS3MDL Magnetometer", color=0x000000, x=5, y=5
+    terminalio.FONT, text="Compass", color=0xFFFFFF, x=5, y=5
 )
 group.append(title_label)
 
-# Add labels for magnetic field data (to be updated dynamically)
-mag_x_label = label.Label(terminalio.FONT, text="X: -- uT", color=0xFFFFFF, x=10, y=25)
-group.append(mag_x_label)
+# Add labels for X, Y magnetic field data
+x_label = label.Label(terminalio.FONT, text="X: --", color=0xFFFFFF, x=5, y=17)
+group.append(x_label)
 
-mag_y_label = label.Label(terminalio.FONT, text="Y: -- uT", color=0xFFFFFF, x=10, y=35)
-group.append(mag_y_label)
+y_label = label.Label(terminalio.FONT, text="Y: --", color=0xFFFFFF, x=5, y=27)
+group.append(y_label)
 
-mag_z_label = label.Label(terminalio.FONT, text="Z: -- uT", color=0xFFFFFF, x=10, y=45)
-group.append(mag_z_label)
+# Add a label for the direction (N, NE, etc.)
+direction_label = label.Label(terminalio.FONT, text="Dir: --", color=0xFFFFFF, x=5, y=37)
+group.append(direction_label)
 
-calibration_label = label.Label(
-    terminalio.FONT, text="Calibrating...", color=0xFFFFFF, x=10, y=55
-)
-group.append(calibration_label)
+# Add a label for the heading (in degrees)
+heading_label = label.Label(terminalio.FONT, text="Heading: --°", color=0xFFFFFF, x=5, y=47)
+group.append(heading_label)
 
 # Set the display's root group to show the content
 oled.root_group = group
 
 # Initialize LIS3MDL sensor
 try:
-    sensor = LIS3MDL(i2c)
-    print("LIS3MDL Magnetometer Initialized")
+    mag_sensor = LIS3MDL(i2c)
+    print("LIS3MDL Magnetometer Initialized.")
 except Exception as e:
     print(f"Failed to initialize LIS3MDL: {e}")
     while True:
-        pass  # Halt if initialization fails
+        pass  # Halt if LIS3MDL fails
 
-# Initialize reset button (for calibration)
-reset_button = digitalio.DigitalInOut(board.D5)  # Use an appropriate GPIO pin
-reset_button.switch_to_input(pull=digitalio.Pull.UP)
+# Calibration offsets from your calibration process
+OFFSET_X = 16.75
+OFFSET_Y = -39.43
+OFFSET_Z = -40.86
 
-# Calibration offsets
-offset_x = 0.0
-offset_y = 0.0
-offset_z = 0.0
+# Magnetic declination for your location (in degrees, Location)
+MAGNETIC_DECLINATION = 11.0  # Declination for location find yours online
 
-def calibrate():
+def calculate_heading(mag_x, mag_y):
     """
-    Calibrates the LIS3MDL by capturing baseline magnetic field values.
+    Calculates the heading from magnetic field components and applies magnetic declination.
     """
-    global offset_x, offset_y, offset_z
-    calibration_label.text = "Calibrating..."
-    print("Calibrating...")
-    time.sleep(2)  # Delay for calibration notice
-    mag_x, mag_y, mag_z = sensor.magnetic
-    offset_x = mag_x
-    offset_y = mag_y
-    offset_z = mag_z
-    calibration_label.text = "Calibration Done"
-    print(f"Calibration complete. Offsets: X={offset_x:.2f}, Y={offset_y:.2f}, Z={offset_z:.2f}")
+    heading = math.atan2(mag_y, mag_x) * (180 / math.pi)  # Convert to degrees
+    if heading < 0:
+        heading += 360  # Normalize to 0-360 degrees
 
-# Perform an initial calibration
-calibrate()
+    # Add magnetic declination to get true heading
+    heading = (heading + MAGNETIC_DECLINATION) % 360
+    return heading
+
+def heading_to_cardinal(heading):
+    """
+    Converts the heading to the nearest cardinal direction (N, NE, E, SE, S, SW, W, NW).
+    """
+    directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    index = round(heading / 45) % 8  # Divide into 8 segments
+    return directions[index]
 
 # Main loop
 while True:
     try:
-        # Check if reset button is pressed
-        if not reset_button.value:
-            calibrate()
-
-        # Read raw magnetic field data
-        mag_x, mag_y, mag_z = sensor.magnetic
+        # Read magnetic field data
+        raw_x, raw_y, raw_z = mag_sensor.magnetic
 
         # Apply calibration offsets
-        cal_x = mag_x - offset_x
-        cal_y = mag_y - offset_y
-        cal_z = mag_z - offset_z
+        calibrated_x = raw_x - OFFSET_X
+        calibrated_y = raw_y - OFFSET_Y
+        calibrated_z = raw_z - OFFSET_Z
 
-        # Update the OLED display with the calibrated data
-        mag_x_label.text = f"X: {cal_x:.2f} uT"
-        mag_y_label.text = f"Y: {cal_y:.2f} uT"
-        mag_z_label.text = f"Z: {cal_z:.2f} uT"
+        # Calculate true heading
+        heading = calculate_heading(calibrated_x, calibrated_y)
+
+        # Determine cardinal direction
+        cardinal_direction = heading_to_cardinal(heading)
+
+        # Update the OLED display
+        x_label.text = f"X: {calibrated_x:.2f}"
+        y_label.text = f"Y: {calibrated_y:.2f}"
+        direction_label.text = f"Dir: {cardinal_direction}"
+        heading_label.text = f"Heading: {heading:.2f}°"
 
         # Debug output to the console
-        print(f"Raw Magnetic Field (uT): X={mag_x:.2f}, Y={mag_y:.2f}, Z={mag_z:.2f}")
-        print(f"Calibrated Magnetic Field (uT): X={cal_x:.2f}, Y={cal_y:.2f}, Z={cal_z:.2f}")
+        print(f"Magnetic Field: X={calibrated_x:.2f}, Y={calibrated_y:.2f}")
+        print(f"True Heading: {heading:.2f}°")
+        print(f"Direction: {cardinal_direction}")
 
     except Exception as e:
-        print(f"Error reading sensor: {e}")
-        mag_x_label.text = "Error"
-        mag_y_label.text = "Error"
-        mag_z_label.text = "Error"
+        print(f"Error in main loop: {e}")
+        x_label.text = "X: Error"
+        y_label.text = "Y: Error"
+        direction_label.text = "Dir: Error"
+        heading_label.text = "Heading: Error"
 
     time.sleep(0.5)  # Update every 0.5 seconds
