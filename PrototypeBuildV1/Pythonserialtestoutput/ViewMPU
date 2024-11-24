@@ -1,0 +1,112 @@
+import sys
+import serial
+import threading
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+from PyQt5.QtCore import QTimer
+from pyqtgraph import PlotWidget, plot
+import pyqtgraph as pg
+
+
+class MPU6050Dashboard(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        # Serial Port Configuration
+        self.serial_port = "COM11"  # Update to match your port
+        self.baud_rate = 9600
+        try:
+            self.serial_connection = serial.Serial(self.serial_port, self.baud_rate, timeout=1)
+        except Exception as e:
+            print(f"Error connecting to serial port: {e}")
+            sys.exit(1)
+
+        # Data Variables
+        self.pitch = 0
+        self.roll = 0
+
+        # Setup GUI
+        self.init_ui()
+
+        # Timer to refresh data
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_display)
+        self.timer.start(100)  # Refresh rate: 100ms
+
+        # Start serial reading in a separate thread
+        self.reading_thread = threading.Thread(target=self.read_serial_data)
+        self.reading_thread.daemon = True
+        self.reading_thread.start()
+
+    def init_ui(self):
+        self.setWindowTitle("MPU6050 Dashboard: Roll and Pitch")
+        self.setGeometry(100, 100, 800, 600)
+
+        # Layouts
+        layout = QVBoxLayout()
+
+        # Graph: Pitch and Roll Dynamics
+        self.mpu_graph = PlotWidget()
+        self.mpu_graph.setBackground("w")
+        self.mpu_graph.addLegend()
+        self.mpu_graph.setTitle("MPU6050: Roll and Pitch Dynamics")
+        self.mpu_graph.setLabel('left', 'Angle (°)')
+        self.mpu_graph.setLabel('bottom', 'Time (s)')
+        self.pitch_curve = self.mpu_graph.plot(pen=pg.mkPen('b', width=2), name="Pitch")
+        self.roll_curve = self.mpu_graph.plot(pen=pg.mkPen('r', width=2), name="Roll")
+        self.time_data = []
+        self.pitch_data = []
+        self.roll_data = []
+        layout.addWidget(self.mpu_graph)
+
+        # Central Widget
+        central_widget = QWidget()
+        central_widget.setLayout(layout)
+        self.setCentralWidget(central_widget)
+
+    def read_serial_data(self):
+        while True:
+            try:
+                if self.serial_connection.in_waiting:
+                    line = self.serial_connection.readline().decode('utf-8').strip()
+                    self.parse_serial_data(line)
+            except Exception as e:
+                print(f"Serial Read Error: {e}")
+
+    def parse_serial_data(self, line):
+        try:
+            # Debug print to inspect raw data
+            print(f"Raw Data: {line}")
+
+            # Parse MPU Data: Pitch and Roll on the same line
+            if "Pitch" in line and "Roll" in line:
+                pitch_value = line.split("Pitch:")[1].split("°")[0].strip()
+                roll_value = line.split("Roll:")[1].split("°")[0].strip()
+                self.pitch = float(pitch_value)
+                self.roll = float(roll_value)
+                print(f"Parsed Pitch: {self.pitch}, Roll: {self.roll}")
+
+        except Exception as e:
+            print(f"Parsing Error: {e}")
+
+    def update_display(self):
+        # Update Graph Data
+        self.time_data.append(len(self.time_data) * 0.1)  # Simulated time steps
+        self.pitch_data.append(self.pitch)
+        self.roll_data.append(self.roll)
+
+        self.pitch_curve.setData(self.time_data, self.pitch_data)
+        self.roll_curve.setData(self.time_data, self.roll_data)
+
+        # Keep data arrays small for performance
+        if len(self.time_data) > 100:
+            self.time_data = self.time_data[-100:]
+            self.pitch_data = self.pitch_data[-100:]
+            self.roll_data = self.roll_data[-100:]
+
+
+# Run the application
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    dashboard = MPU6050Dashboard()
+    dashboard.show()
+    sys.exit(app.exec_())
