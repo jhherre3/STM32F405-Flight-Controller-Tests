@@ -1,0 +1,134 @@
+import sys
+import serial
+import threading
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QGridLayout, QLabel, QWidget
+from PyQt5.QtCore import QTimer
+from pyqtgraph import PlotWidget, plot
+import pyqtgraph as pg
+
+
+class BMP280Dashboard(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        # Serial Port Configuration
+        self.serial_port = "COM11"  # Update to match your port
+        self.baud_rate = 9600
+        try:
+            self.serial_connection = serial.Serial(self.serial_port, self.baud_rate, timeout=1)
+        except Exception as e:
+            print(f"Error connecting to serial port: {e}")
+            sys.exit(1)
+
+        # Data Variables
+        self.temperature = 0
+        self.altitude = 0
+
+        # Setup GUI
+        self.init_ui()
+
+        # Timer to refresh data
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_display)
+        self.timer.start(100)  # Refresh rate: 100ms
+
+        # Start serial reading in a separate thread
+        self.reading_thread = threading.Thread(target=self.read_serial_data)
+        self.reading_thread.daemon = True
+        self.reading_thread.start()
+
+    def init_ui(self):
+        self.setWindowTitle("BMP280 Dashboard: Temperature and Altitude")
+        self.setGeometry(100, 100, 1200, 800)
+
+        # Layouts
+        layout = QVBoxLayout()
+
+        # Grid layout for graphs
+        grid_layout = QGridLayout()
+
+        # Temperature Graph
+        self.temp_graph = PlotWidget()
+        self.temp_graph.setBackground("w")
+        self.temp_graph.addLegend()
+        self.temp_graph.setTitle("BMP280: Temperature")
+        self.temp_graph.setLabel('left', 'Temperature (°C)')
+        self.temp_graph.setLabel('bottom', 'Time (s)')
+        self.temp_curve = self.temp_graph.plot(pen=pg.mkPen('r', width=2), name="Temperature")
+        self.temp_time = []
+        self.temp_data = []
+        grid_layout.addWidget(self.temp_graph, 0, 0)
+
+        # Altitude Graph
+        self.alt_graph = PlotWidget()
+        self.alt_graph.setBackground("w")
+        self.alt_graph.addLegend()
+        self.alt_graph.setTitle("BMP280: Altitude")
+        self.alt_graph.setLabel('left', 'Altitude (m)')
+        self.alt_graph.setLabel('bottom', 'Time (s)')
+        self.alt_curve = self.alt_graph.plot(pen=pg.mkPen('b', width=2), name="Altitude")
+        self.alt_time = []
+        self.alt_data = []
+        grid_layout.addWidget(self.alt_graph, 0, 1)
+
+        layout.addLayout(grid_layout)
+
+        # Central Widget
+        central_widget = QWidget()
+        central_widget.setLayout(layout)
+        self.setCentralWidget(central_widget)
+
+    def read_serial_data(self):
+        while True:
+            try:
+                if self.serial_connection.in_waiting:
+                    line = self.serial_connection.readline().decode('utf-8').strip()
+                    self.parse_serial_data(line)
+            except Exception as e:
+                print(f"Serial Read Error: {e}")
+
+    def parse_serial_data(self, line):
+        try:
+            # Debug print to inspect raw data
+            print(f"Raw Data: {line}")
+
+            # Parse BMP Data
+            if "Temp" in line:
+                temp_value = line.split("Temp:")[1].split("°")[0].strip()
+                self.temperature = float(temp_value)
+                print(f"Parsed Temperature: {self.temperature}")
+            if "Alt" in line:
+                alt_value = line.split("Alt:")[1].split("m")[0].strip()
+                self.altitude = float(alt_value)
+                print(f"Parsed Altitude: {self.altitude}")
+
+        except Exception as e:
+            print(f"Parsing Error: {e}")
+
+    def update_display(self):
+        # Update Graph Data
+        # Temperature Graph
+        self.temp_time.append(len(self.temp_time) * 0.1)  # Simulated time steps
+        self.temp_data.append(self.temperature)
+        self.temp_curve.setData(self.temp_time, self.temp_data)
+
+        # Altitude Graph
+        self.alt_time.append(len(self.alt_time) * 0.1)  # Simulated time steps
+        self.alt_data.append(self.altitude)
+        self.alt_curve.setData(self.alt_time, self.alt_data)
+
+        # Keep data arrays small for performance
+        if len(self.temp_time) > 100:
+            self.temp_time = self.temp_time[-100:]
+            self.temp_data = self.temp_data[-100:]
+        if len(self.alt_time) > 100:
+            self.alt_time = self.alt_time[-100:]
+            self.alt_data = self.alt_data[-100:]
+
+
+# Run the application
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    dashboard = BMP280Dashboard()
+    dashboard.show()
+    sys.exit(app.exec_())
