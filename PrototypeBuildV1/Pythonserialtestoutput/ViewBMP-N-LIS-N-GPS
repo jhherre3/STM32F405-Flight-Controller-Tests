@@ -1,0 +1,204 @@
+import sys
+import serial
+import threading
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QGridLayout, QLabel, QWidget
+from PyQt5.QtCore import QTimer
+from pyqtgraph import PlotWidget, plot
+import pyqtgraph as pg
+
+
+class GPSDashboard(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        # Serial Port Configuration
+        self.serial_port = "COM11"  # Update to match your port
+        self.baud_rate = 9600
+        try:
+            self.serial_connection = serial.Serial(self.serial_port, self.baud_rate, timeout=1)
+        except Exception as e:
+            print(f"Error connecting to serial port: {e}")
+            sys.exit(1)
+
+        # Data Variables
+        self.temperature = 0
+        self.altitude = 0
+        self.heading = 0  # Numerical heading (degrees)
+        self.direction = "N"  # Cardinal direction (text)
+        self.latitude = "N/A"
+        self.longitude = "N/A"
+        self.satellites = 0
+
+        # Graph data storage
+        self.temp_time = []
+        self.temp_data = []
+        self.alt_time = []
+        self.alt_data = []
+
+        # Setup GUI
+        self.init_ui()
+
+        # Timer to refresh data
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_display)
+        self.timer.start(100)  # Refresh rate: 100ms
+
+        # Start serial reading in a separate thread
+        self.reading_thread = threading.Thread(target=self.read_serial_data)
+        self.reading_thread.daemon = True  # Ensure thread stops with the main program
+        self.reading_thread.start()
+
+    def init_ui(self):
+        self.setWindowTitle("GPS and BMP280 Dashboard")
+        self.setGeometry(100, 100, 1200, 800)
+
+        # Layouts
+        layout = QVBoxLayout()
+
+        # Grid layout for graphs and GPS data
+        grid_layout = QGridLayout()
+
+        # Temperature Graph
+        self.temp_graph = PlotWidget()
+        self.temp_graph.setBackground("w")
+        self.temp_graph.addLegend()
+        self.temp_graph.setTitle("BMP280: Temperature")
+        self.temp_graph.setLabel('left', 'Temperature (°C)')
+        self.temp_graph.setLabel('bottom', 'Time (s)')
+        self.temp_curve = self.temp_graph.plot(pen=pg.mkPen('r', width=2), name="Temperature")
+        grid_layout.addWidget(self.temp_graph, 0, 0)
+
+        # Altitude Graph
+        self.alt_graph = PlotWidget()
+        self.alt_graph.setBackground("w")
+        self.alt_graph.addLegend()
+        self.alt_graph.setTitle("BMP280: Altitude")
+        self.alt_graph.setLabel('left', 'Altitude (m)')
+        self.alt_graph.setLabel('bottom', 'Time (s)')
+        self.alt_curve = self.alt_graph.plot(pen=pg.mkPen('b', width=2), name="Altitude")
+        grid_layout.addWidget(self.alt_graph, 0, 1)
+
+        # Compass Data Display
+        self.heading_label = QLabel("Heading: 0°")
+        self.heading_label.setStyleSheet("font-size: 20px; font-weight: bold; text-align: center;")
+        self.direction_label = QLabel("Direction: N")
+        self.direction_label.setStyleSheet("font-size: 20px; font-weight: bold; text-align: center;")
+        grid_layout.addWidget(self.heading_label, 1, 0)
+        grid_layout.addWidget(self.direction_label, 1, 1)
+
+        # GPS Data Display
+        self.gps_label = QLabel("GPS: Lat: N/A, Lon: N/A")
+        self.gps_label.setStyleSheet("font-size: 20px; font-weight: bold; text-align: center;")
+        self.satellites_label = QLabel("Satellites: 0")
+        self.satellites_label.setStyleSheet("font-size: 20px; font-weight: bold; text-align: center;")
+        grid_layout.addWidget(self.gps_label, 2, 0)
+        grid_layout.addWidget(self.satellites_label, 2, 1)
+
+        layout.addLayout(grid_layout)
+
+        # Central Widget
+        central_widget = QWidget()
+        central_widget.setLayout(layout)
+        self.setCentralWidget(central_widget)
+
+    def read_serial_data(self):
+        """Continuously read data from the serial port."""
+        while True:
+            try:
+                if self.serial_connection.in_waiting:
+                    line = self.serial_connection.readline().decode('utf-8').strip()
+                    self.parse_serial_data(line)
+            except Exception as e:
+                print(f"Serial Read Error: {e}")
+
+    def parse_serial_data(self, line):
+        """Parse incoming serial data."""
+        try:
+            # Debug print to inspect raw data
+            print(f"Raw Data: {line}")
+
+            # Parse BMP Data
+            if "Temp" in line:
+                temp_value = line.split("Temp:")[1].split("°")[0].strip()
+                self.temperature = float(temp_value)
+                print(f"Parsed Temperature: {self.temperature}")
+            if "Alt" in line:
+                alt_value = line.split("Alt:")[1].split("m")[0].strip()
+                self.altitude = float(alt_value)
+                print(f"Parsed Altitude: {self.altitude}")
+            if "Heading" in line:
+                heading_value = line.split("Heading:")[1].split("°")[0].strip()
+                self.heading = float(heading_value)
+                self.direction = self.calculate_direction(self.heading)
+                print(f"Parsed Heading: {self.heading}, Direction: {self.direction}")
+            if "GPS" in line:
+                if "Lat:" in line and "Lon:" in line:
+                    lat_lon = line.split("GPS: Lat:")[1]
+                    self.latitude, self.longitude = lat_lon.split(", Lon:")
+                    self.latitude = self.latitude.strip()
+                    self.longitude = self.longitude.strip()
+                    print(f"Parsed GPS - Lat: {self.latitude}, Lon: {self.longitude}")
+                if "Satellites:" in line:
+                    sat_value = line.split("Satellites:")[1].strip()
+                    self.satellites = int(sat_value)
+                    print(f"Parsed Satellites: {self.satellites}")
+
+        except Exception as e:
+            print(f"Parsing Error: {e}")
+
+    def calculate_direction(self, heading):
+        """Calculate the cardinal direction from the heading."""
+        if 337.5 <= heading < 360 or 0 <= heading < 22.5:
+            return "N"
+        elif 22.5 <= heading < 67.5:
+            return "NE"
+        elif 67.5 <= heading < 112.5:
+            return "E"
+        elif 112.5 <= heading < 157.5:
+            return "SE"
+        elif 157.5 <= heading < 202.5:
+            return "S"
+        elif 202.5 <= heading < 247.5:
+            return "SW"
+        elif 247.5 <= heading < 292.5:
+            return "W"
+        elif 292.5 <= heading < 337.5:
+            return "NW"
+
+    def update_display(self):
+        """Update graphs and compass/GPS data."""
+        # Update Graph Data
+        # Temperature Graph
+        current_time = len(self.temp_time) * 0.1  # Incremental time in seconds
+        self.temp_time.append(current_time)
+        self.temp_data.append(self.temperature)
+        self.temp_curve.setData(self.temp_time, self.temp_data)
+
+        # Altitude Graph
+        self.alt_time.append(current_time)
+        self.alt_data.append(self.altitude)
+        self.alt_curve.setData(self.alt_time, self.alt_data)
+
+        # Update Compass Data
+        self.heading_label.setText(f"Heading: {self.heading:.2f}°")
+        self.direction_label.setText(f"Direction: {self.direction}")
+
+        # Update GPS Data
+        self.gps_label.setText(f"GPS: Lat: {self.latitude}, Lon: {self.longitude}")
+        self.satellites_label.setText(f"Satellites: {self.satellites}")
+
+        # Keep graph data arrays from growing indefinitely
+        if len(self.temp_time) > 1000:
+            self.temp_time = self.temp_time[-1000:]
+            self.temp_data = self.temp_data[-1000:]
+        if len(self.alt_time) > 1000:
+            self.alt_time = self.alt_time[-1000:]
+            self.alt_data = self.alt_data[-1000:]
+
+
+# Run the application
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    dashboard = GPSDashboard()
+    dashboard.show()
+    sys.exit(app.exec_())
