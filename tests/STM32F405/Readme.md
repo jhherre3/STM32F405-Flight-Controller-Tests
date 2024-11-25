@@ -2,7 +2,7 @@
 
 This section is designed to help set up the STM32F405 with CircuitPython and verify its functionality. 
 
-1. **Install CircuitPython** on the STM32F405 board.
+1. **Install CircuitPython** on the STM32F405 board. Put device in DFU mode for the f405 jumper wire from 3.3V to BO pin then flash on STM programmer. 
 2. **Blink the onboard LED** to confirm GPIO functionality.
 3. **Read serial output** to verify the board’s ability to communicate.
 
