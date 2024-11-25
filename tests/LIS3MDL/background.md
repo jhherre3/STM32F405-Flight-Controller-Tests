@@ -2,7 +2,7 @@
 
 ## Overview
 The **LIS3MDL** is a high-performance, three-axis magnetometer sensor designed for applications requiring accurate magnetic field measurements. It is widely used in drones and Unmanned Aerial Systems (UAS) for navigation, stability, and orientation sensing. The sensor operates via I2C or SPI interfaces and offers high sensitivity with low power consumption, making it ideal for embedded systems.
-
+ 
 ---
 
 ## Key Features
@@ -19,7 +19,7 @@ To work with the LIS3MDL magnetometer using CircuitPython, the following librari
 
 1. **Adafruit LIS3MDL**: 
    - Provides easy access to the LIS3MDL sensor's functionality.
-   - File: `adafruit_lis3mdl.mpy`
+   - File: `adafruit_lis3mdl.mpy` and folder
 
 2. **Adafruit Bus Device**:
    - Required for I2C communication.
