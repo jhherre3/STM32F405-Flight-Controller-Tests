@@ -20,7 +20,7 @@ except Exception as e:
     while True:
         pass
 
-# Calibration offsets (adjust as needed)
+# Calibration offsets (adjust as needed) Run auto callibrate to get these values.
 offset_x = 0.0
 offset_y = 0.0
 offset_z = 0.0
