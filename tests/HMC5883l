@@ -1,0 +1,66 @@
+#this is the semi working code need to modify to work 
+import time
+import board
+import busio
+
+# QMC5883L I2C Address
+QMC5883L_ADDRESS = 0x0D  
+
+# Register Addresses
+QMC5883L_REG_CTRL1 = 0x09  # Control register 1
+QMC5883L_REG_DATA = 0x00   # Data output register (X, Y, Z)
+
+# Initialize I2C manually
+i2c = busio.I2C(board.SCL, board.SDA)
+
+# Function to manually write a byte to a register
+def write_register(register, value):
+    """Manually write to a register"""
+    i2c.writeto(QMC5883L_ADDRESS, bytes([register, value]))
+
+# Function to manually read multiple bytes from a register
+def read_register(register, length):
+    """Manually read data from a register"""
+    result = bytearray(length)
+    i2c.writeto_then_readfrom(QMC5883L_ADDRESS, bytes([register]), result)
+    return result
+
+# Configure QMC5883L Sensor
+while not i2c.try_lock():
+    pass  # Wait until I2C is ready
+
+try:
+    # Set Control Register 1:
+    # - Continuous mode (00)
+    # - 200Hz data rate (11)
+    # - Full-scale 2G (00)
+    # - Over Sampling Rate 512 (01)
+    write_register(QMC5883L_REG_CTRL1, 0b00011101)  # 0x1D
+
+    print("QMC5883L Magnetometer Initialized")
+
+    while True:
+        # Read 6 bytes from the data register (X, Y, Z)
+        data = read_register(QMC5883L_REG_DATA, 6)
+
+        # Convert raw data to 16-bit signed values
+        x = (data[1] << 8) | data[0]
+        y = (data[3] << 8) | data[2]
+        z = (data[5] << 8) | data[4]
+
+        # Convert to signed values (Two’s Complement)
+        if x > 32767: x -= 65536
+        if y > 32767: y -= 65536
+        if z > 32767: z -= 65536
+
+        # Print magnetometer readings
+        print(f"Magnetic Field (Raw): X={x}, Y={y}, Z={z}")
+        print("-" * 40)
+
+        time.sleep(0.5)  # Read every 0.5 seconds
+
+except Exception as e:
+    print(f"Error: {e}")
+
+finally:
+    i2c.unlock()
