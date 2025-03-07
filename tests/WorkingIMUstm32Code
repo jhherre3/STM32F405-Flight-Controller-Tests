@@ -1,0 +1,39 @@
+import board
+import busio
+import time
+import struct
+
+# Initialize UART (using default TX/RX pins)
+uart = busio.UART(board.TX, board.RX, baudrate=1000000, timeout=0.01)
+
+print("🚀 IMU Data Streaming Initialized")
+print("Timestamp,AngularRateX,AngularRateY,AngularRateZ,LinearAccelX,LinearAccelY,LinearAccelZ")  # CSV Header
+
+def process_imu_message(message):
+    """Processes IMU message to extract Angular Rate & Linear Acceleration"""
+    if len(message) < 14:  # Ensure at least 14 bytes are received
+        return
+    
+    if message[0] == 0x5E:  # Validate message header
+        # Extract angular rates (scale: 2^-11)
+        angular_rate_x = struct.unpack(">h", message[2:4])[0] * 0.00048828125
+        angular_rate_y = struct.unpack(">h", message[4:6])[0] * 0.00048828125
+        angular_rate_z = struct.unpack(">h", message[6:8])[0] * 0.00048828125
+
+        # Extract linear acceleration (scale: 0.3048 * 2^-5)
+        linear_accel_x = struct.unpack(">h", message[8:10])[0] * 0.004788403
+        linear_accel_y = struct.unpack(">h", message[10:12])[0] * 0.004788403
+        linear_accel_z = struct.unpack(">h", message[12:14])[0] * 0.004788403
+
+        timestamp = time.monotonic()  # Get timestamp in seconds
+
+        # Print in CSV format
+        print("{:.3f},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f}".format(
+            timestamp, angular_rate_x, angular_rate_y, angular_rate_z,
+            linear_accel_x, linear_accel_y, linear_accel_z
+        ))
+
+while True:
+    data = uart.read(16)  # Read up to 16 bytes at a time
+    if data:
+        process_imu_message(data)
