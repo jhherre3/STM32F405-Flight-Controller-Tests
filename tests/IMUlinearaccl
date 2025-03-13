@@ -1,0 +1,59 @@
+import board
+import busio
+import struct
+
+# Initialize UART (using default TX/RX pins)
+uart = busio.UART(board.TX, board.RX, baudrate=1000000)
+
+print("🚀 IMU Linear Acceleration Data Streaming Initialized")
+print("LinearAccelX,LinearAccelY,LinearAccelZ")  # CSV Header
+
+# 🔹 Adjust Scale Factor for Precise Tuning
+SCALE_FACTOR = 0.0001  # Lowered for better precision
+
+# 🔹 Offsets to Ensure Zero When Stationary
+OFFSET_X = 0.0
+OFFSET_Y = 0.0
+OFFSET_Z = 9.81  # Earth's gravity
+
+# 🔹 Noise Threshold (Removes Jumps)
+THRESHOLD = 0.01  # Set small accelerations to 0
+
+# 🔹 Store Last Stable Values
+prev_x, prev_y, prev_z = 0.0, 0.0, 0.0
+
+def process_imu_message(message):
+    """Processes IMU message to extract, filter, and stabilize Linear Acceleration"""
+    global prev_x, prev_y, prev_z
+
+    if len(message) < 14 or message[0] != 0x5E:  # Ensure valid message
+        return
+    
+    # Extract raw acceleration data (signed 16-bit integers)
+    raw_x = struct.unpack(">h", message[8:10])[0]
+    raw_y = struct.unpack(">h", message[10:12])[0]
+    raw_z = struct.unpack(">h", message[12:14])[0]
+
+    # Convert raw data to acceleration (m/s²) using SCALE_FACTOR
+    linear_accel_x = (raw_x * SCALE_FACTOR) - OFFSET_X
+    linear_accel_y = (raw_y * SCALE_FACTOR) - OFFSET_Y
+    linear_accel_z = (raw_z * SCALE_FACTOR) - OFFSET_Z  # Gravity removed
+
+    # 🔹 Apply Noise Threshold – If below threshold, set to zero
+    linear_accel_x = 0.0000 if abs(linear_accel_x) < THRESHOLD else linear_accel_x
+    linear_accel_y = 0.0000 if abs(linear_accel_y) < THRESHOLD else linear_accel_y
+    linear_accel_z = 0.0000 if abs(linear_accel_z) < THRESHOLD else linear_accel_z
+
+    # 🔹 Prevent Freezing – If no movement, keep last stable value
+    if linear_accel_x == 0.0000 and linear_accel_y == 0.0000 and linear_accel_z == 0.0000:
+        linear_accel_x, linear_accel_y, linear_accel_z = prev_x, prev_y, prev_z
+    else:
+        prev_x, prev_y, prev_z = linear_accel_x, linear_accel_y, linear_accel_z  # Update last valid data
+
+    # Print refined acceleration data
+    print("{:.4f},{:.4f},{:.4f}".format(linear_accel_x, linear_accel_y, linear_accel_z))
+
+while True:
+    data = uart.read(16)  # Read up to 16 bytes at a time
+    if data:
+        process_imu_message(data)
