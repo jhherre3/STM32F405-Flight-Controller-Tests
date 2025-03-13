@@ -1,0 +1,68 @@
+import time
+import board
+import busio
+from adafruit_bme280 import basic as adafruit_bme280
+
+# Debug message for startup
+print("Starting BME280 sensor test...")
+
+# Initialize I2C
+try:
+    i2c = busio.I2C(board.SCL, board.SDA)
+    print("I2C initialized successfully.")
+except Exception as e:
+    print(f"Error initializing I2C: {e}")
+    while True:
+        pass  # Halt execution if I2C fails
+
+# Function to scan I2C bus
+def scan_i2c():
+    """ Scan for available I2C devices """
+    print("Scanning I2C bus...")
+    while not i2c.try_lock():
+        pass
+    addresses = [hex(addr) for addr in i2c.scan()]
+    i2c.unlock()
+    if addresses:
+        print(f"I2C addresses found: {addresses}")
+    else:
+        print("No I2C devices found. Check your wiring!")
+    return addresses
+
+# Scan for devices
+addresses = scan_i2c()
+
+# Set BME280 I2C address (default 0x76, or 0x77 if detected)
+BME280_ADDRESS = 0x76  
+if "0x77" in addresses:
+    BME280_ADDRESS = 0x77  
+
+# Initialize BME280 sensor
+try:
+    bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c, address=BME280_ADDRESS)
+    print(f"BME280 detected at address: {hex(BME280_ADDRESS)}")
+    bme280.sea_level_pressure = 1013.25  # Standard sea-level pressure in hPa
+except Exception as e:
+    print(f"Error initializing BME280: {e}")
+    while True:
+        pass  # Halt execution if the sensor initialization fails
+
+# **Set Initial Altitude as Reference**
+initial_altitude = bme280.altitude
+print(f"Initial Altitude Set: {initial_altitude:.2f} meters")
+
+# Main loop for reading sensor data
+while True:
+    try:
+        # Read sensor data
+        temperature_f = bme280.temperature * 9 / 5 + 32  # Convert °C to °F
+        current_altitude = bme280.altitude
+        relative_altitude = current_altitude - initial_altitude  # Relative altitude
+
+        # Display temperature & altitude in meters
+        print(f"Temperature: {temperature_f:.2f} °F | Altitude: {relative_altitude:.2f} meters")
+        print("-" * 40)
+    except Exception as e:
+        print(f"Error reading sensor data: {e}")
+
+    time.sleep(2)  # Wait 2 seconds before next reading
